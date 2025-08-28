@@ -125,42 +125,54 @@ if (hasPrice) {
 }
 
 
-  const variantJoin = db
-    .select({
-      variantId: productVariants.id,
-      productId: productVariants.productId,
-      price: sql<number>`${productVariants.price}::numeric`.as("price"),
-      colorId: productVariants.colorId,
-      sizeId: productVariants.sizeId,
-    })
-    .from(productVariants)
-    .where(variantConds.length ? and(...variantConds) : undefined)
-    .as("v");
-  const imagesJoin = hasColor
-    ? db
-        .select({
-          productId: productImages.productId,
-          url: productImages.url,
-          rn: sql<number>`row_number() over (partition by ${productImages.productId} order by ${productImages.isPrimary} desc, ${productImages.sortOrder} asc)`.as("rn"),
-        })
-        .from(productImages)
-        .innerJoin(productVariants, eq(productVariants.id, productImages.variantId))
-        .where(
-          inArray(
-            productVariants.colorId,
-            db.select({ id: colors.id }).from(colors).where(inArray(colors.slug, filters.colorSlugs))
-          )
+const variantJoin = db
+  .select({
+    variantId: productVariants.id,
+    productId: productVariants.productId,
+    price: sql<number>`${productVariants.price}::numeric`.as("price"),
+    colorId: productVariants.colorId,
+    sizeId: productVariants.sizeId,
+  })
+  .from(productVariants)
+  .where(variantConds.length ? and(...variantConds) : undefined)
+  .as("v");
+
+const imagesJoin = hasColor && filters.colorSlugs?.length
+  ? db
+      .select({
+        productId: productImages.productId,
+        url: productImages.url,
+        rn: sql<number>`row_number() over (
+            partition by ${productImages.productId}
+            order by ${productImages.isPrimary} desc, ${productImages.sortOrder} asc
+          )`.as("rn"),
+      })
+      .from(productImages)
+      .innerJoin(productVariants, eq(productVariants.id, productImages.variantId))
+      .where(
+        inArray(
+          productVariants.colorId,
+          db
+            .select({ id: colors.id })
+            .from(colors)
+            .where(inArray(colors.slug, filters.colorSlugs))
+            .as("color_subquery") // ✅ alias fixes typing
         )
-        .as("pi")
-    : db
-        .select({
-          productId: productImages.productId,
-          url: productImages.url,
-          rn: sql<number>`row_number() over (partition by ${productImages.productId} order by ${productImages.isPrimary} desc, ${productImages.sortOrder} asc)`.as("rn"),
-        })
-        .from(productImages)
-        .where(isNull(productImages.variantId))
-        .as("pi")
+      )
+      .as("pi")
+  : db
+      .select({
+        productId: productImages.productId,
+        url: productImages.url,
+        rn: sql<number>`row_number() over (
+            partition by ${productImages.productId}
+            order by ${productImages.isPrimary} desc, ${productImages.sortOrder} asc
+          )`.as("rn"),
+      })
+      .from(productImages)
+      .where(isNull(productImages.variantId))
+      .as("pi");
+
 
 
   const baseWhere = conds.length ? and(...conds) : undefined;
