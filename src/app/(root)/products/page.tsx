@@ -3,6 +3,7 @@ import { parseFilterParams } from "@/lib/utils/query";
 import { getAllProducts } from "@/lib/actions/product";
 import Sort from "@/components/Sort";
 import Filters from "@/components/Filter";
+import { Card } from "@/components";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
