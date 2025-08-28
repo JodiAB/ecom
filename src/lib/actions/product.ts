@@ -191,9 +191,9 @@ const imagesJoin = hasColor && filters.colorSlugs?.length
       ? desc(sql`max(${variantJoin.price})`)
       : desc(products.createdAt);
 
-  const page = Math.max(1, filters.page);
-  const limit = Math.max(1, Math.min(filters.limit, 60));
-  const offset = (page - 1) * limit;
+const page = Math.max(1, filters.page ?? 1);
+const limit = Math.max(1, Math.min(filters.limit ?? 20, 60)); // also guard limit
+const offset = (page - 1) * limit;
 
   const rows = await db
     .select({
